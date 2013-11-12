@@ -10,14 +10,27 @@ SvgItem::SvgItem(QGraphicsItem *parent) :
 void SvgItem::paint(QPainter *painter, const QStyleOptionGraphicsItem *option, QWidget *widget)
 {
     painter->setRenderHint( QPainter::Antialiasing );
-    QPen pen(Qt::black);
-    pen.setWidthF(0.25);
+    QPen pen(Qt::black, 0.15, Qt::SolidLine, Qt::RoundCap, Qt::RoundJoin);
+    pen.setWidthF(0.15);
     painter->setPen(pen);
 
-    foreach(QLineF* line, lineList)
+    foreach(Line* line, lineList)
+    {
+        pen.setWidthF( line->getWidth() );
+        painter->setPen(pen);
         painter->drawLine(line->p1(), line->p2());
-    foreach(QRectF* circle, circleList)
+    }
+
+    pen.setWidthF(0.25);
+    painter->setPen(pen);
+    foreach(Circle* circle, circleList)
+    {
+        QBrush brush = painter->brush();
+        brush.setStyle(Qt::SolidPattern);
+        painter->setBrush(brush);
+
         painter->drawEllipse(circle->center(), circle->height(), circle->width());
+    }
 
     //QGraphicsRectItem::paint(painter, option, widget);
 }

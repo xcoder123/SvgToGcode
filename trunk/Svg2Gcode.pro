@@ -15,11 +15,15 @@ TEMPLATE = app
 SOURCES += main.cpp\
         mainwindow.cpp \
     svgitem.cpp \
-    gcodeviewer.cpp
+    gcodeviewer.cpp \
+    line.cpp \
+    circle.cpp
 
 HEADERS  += mainwindow.h \
     svgitem.h \
-    gcodeviewer.h
+    gcodeviewer.h \
+    line.h \
+    circle.h
 
 FORMS    += mainwindow.ui \
     gcodeviewer.ui

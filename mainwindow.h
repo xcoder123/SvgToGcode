@@ -10,6 +10,10 @@
 #include "svgitem.h"
 #include "gcodeviewer.h"
 #include <QTimer>
+#include <QDoubleSpinBox>
+#include "line.h"
+#include "circle.h"
+
 
 namespace Ui {
 class MainWindow;
@@ -35,8 +39,8 @@ private:
     QXmlStreamReader xml;
     QGraphicsScene * scene;
     SvgItem * svgItem;
-    QList<QLineF*> lineList;
-    QList<QRectF*> circleList;
+    QList<Line*> lineList;
+    QList<Circle*> circleList;
 };
 
 

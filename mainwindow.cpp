@@ -10,6 +10,15 @@ MainWindow::MainWindow(QWidget *parent) :
     connect(ui->actionOpen_SVG, SIGNAL(triggered()), this, SLOT(openSvg()));
     connect(ui->actionGenerate_GCode, SIGNAL(triggered()), this, SLOT(generateGCode()));
 
+    QDoubleSpinBox *penWidth = new QDoubleSpinBox(this);
+    penWidth->setMinimum(0.1);
+    penWidth->setValue(0.5);
+    penWidth->setSingleStep( 0.1 );
+    penWidth->setToolTip( tr("Pen width") );
+    penWidth->setSuffix( " mm" );
+
+    ui->mainToolBar->addWidget( penWidth );
+
     scene = new QGraphicsScene(0, 0, 800,600, this);
     ui->graphicsView->setScene( scene );
 
@@ -17,6 +26,8 @@ MainWindow::MainWindow(QWidget *parent) :
 
 
     scene->addItem( svgItem );
+
+    qDebug() << tr("Application locked and loaded...");
 
 }
 
@@ -77,8 +88,15 @@ void MainWindow::readSVG()
             {
                 qDebug() << "element name: '" << name;
                 QXmlStreamAttributes attrib = xml.attributes();
-                QLineF *line = new QLineF(attrib.value("x1").toFloat(), attrib.value("y1").toFloat(),
-                            attrib.value("x2").toFloat(),attrib.value("y2").toFloat());
+                QString style = attrib.value("style").toString();
+
+                double lineWidth = style.mid( style.indexOf("stroke-width:")+13, style.indexOf(";")-13  ).toDouble();
+
+                Line *line = new Line(attrib.value("x1").toFloat(), attrib.value("y1").toFloat(),
+                                      attrib.value("x2").toFloat(),attrib.value("y2").toFloat(),
+                                      lineWidth);
+
+
 
                 //qDebug() << "line: " << line;
                 lineList.push_back(line);
@@ -96,7 +114,7 @@ void MainWindow::readSVG()
                 qDebug() << "element name: '" << name;
                 QXmlStreamAttributes attrib = xml.attributes();
                 float diameter = attrib.value("r").toFloat();
-                QRectF *circle = new QRectF(attrib.value("cx").toFloat()-diameter/2, attrib.value("cy").toFloat()-diameter/2,
+                Circle *circle = new Circle(attrib.value("cx").toFloat()-diameter/2, attrib.value("cy").toFloat()-diameter/2,
                             diameter,diameter);
 
                 //qDebug() << "line: " << line;
@@ -123,13 +141,13 @@ void MainWindow::readSVG()
 
         height  *= -1;
 
-        foreach(QLineF* line, lineList)
+        foreach(Line* line, lineList)
         {
             line->setPoints( QPointF(line->p1().x(), height+line->p1().y()),
                              QPointF(line->p2().x(), height+line->p2().y()));
         }
 
-        foreach(QRectF* circle, circleList)
+        foreach(Circle* circle, circleList)
         {
             circle->setRect( circle->x(), height+circle->y(), circle->width(), circle->height() );
         }

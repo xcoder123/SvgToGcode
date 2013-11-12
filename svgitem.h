@@ -3,6 +3,9 @@
 
 #include <QGraphicsRectItem>
 #include <QPainter>
+#include "line.h"
+#include <QDebug>
+#include "circle.h"
 
 class SvgItem : public QGraphicsRectItem
 {
@@ -18,12 +21,12 @@ protected:
     void paint(QPainter *painter, const QStyleOptionGraphicsItem *option, QWidget *widget);
 
 public slots:
-    void setLineList(QList<QLineF*> list) { lineList = list; }
-    void setCircleList(QList<QRectF*> list) { circleList = list; }
+    void setLineList(QList<Line*> list) { lineList = list; }
+    void setCircleList(QList<Circle*> list) { circleList = list; }
 
 private:
-    QList<QLineF*> lineList;
-    QList<QRectF*> circleList;
+    QList<Line*> lineList;
+    QList<Circle*> circleList;
 
 };
 

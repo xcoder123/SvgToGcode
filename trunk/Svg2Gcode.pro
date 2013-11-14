@@ -17,13 +17,15 @@ SOURCES += main.cpp\
     svgitem.cpp \
     gcodeviewer.cpp \
     line.cpp \
-    circle.cpp
+    circle.cpp \
+    qbezier.cpp
 
 HEADERS  += mainwindow.h \
     svgitem.h \
     gcodeviewer.h \
     line.h \
-    circle.h
+    circle.h \
+    qbezier.h
 
 FORMS    += mainwindow.ui \
     gcodeviewer.ui

@@ -6,6 +6,7 @@
 #include "line.h"
 #include <QDebug>
 #include "circle.h"
+#include "qbezier.h"
 
 class SvgItem : public QGraphicsRectItem
 {
@@ -23,10 +24,12 @@ protected:
 public slots:
     void setLineList(QList<Line*> list) { lineList = list; }
     void setCircleList(QList<Circle*> list) { circleList = list; }
+    void setQBezierList(QList<QBezier*> list) { qBezierList = list; }
 
 private:
     QList<Line*> lineList;
     QList<Circle*> circleList;
+    QList<QBezier*> qBezierList;
 
 };
 

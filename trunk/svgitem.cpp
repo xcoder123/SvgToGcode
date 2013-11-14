@@ -14,12 +14,20 @@ void SvgItem::paint(QPainter *painter, const QStyleOptionGraphicsItem *option, Q
     pen.setWidthF(0.15);
     painter->setPen(pen);
 
+
+    foreach(QBezier *qbezier, qBezierList)
+    {
+        painter->drawPolyline(qbezier->getPolygon());
+    }
+
     foreach(Line* line, lineList)
     {
         pen.setWidthF( line->getWidth() );
         painter->setPen(pen);
         painter->drawLine(line->p1(), line->p2());
     }
+
+
 
     pen.setWidthF(0.25);
     painter->setPen(pen);
@@ -31,6 +39,7 @@ void SvgItem::paint(QPainter *painter, const QStyleOptionGraphicsItem *option, Q
 
         painter->drawEllipse(circle->center(), circle->height(), circle->width());
     }
+
 
     //QGraphicsRectItem::paint(painter, option, widget);
 }

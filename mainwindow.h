@@ -13,6 +13,7 @@
 #include <QDoubleSpinBox>
 #include "line.h"
 #include "circle.h"
+#include "qbezier.h"
 
 
 namespace Ui {
@@ -41,6 +42,8 @@ private:
     SvgItem * svgItem;
     QList<Line*> lineList;
     QList<Circle*> circleList;
+    QList<QBezier*> qBezierList;
+    double elevation;
 };
 
 

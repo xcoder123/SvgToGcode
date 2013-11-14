@@ -1,6 +1,8 @@
 #include "mainwindow.h"
 #include "ui_mainwindow.h"
 
+
+
 MainWindow::MainWindow(QWidget *parent) :
     QMainWindow(parent),
     ui(new Ui::MainWindow)
@@ -24,15 +26,26 @@ MainWindow::MainWindow(QWidget *parent) :
 
     svgItem = new SvgItem();
 
-
     scene->addItem( svgItem );
 
+
+    elevation = 2.2;
     qDebug() << tr("Application locked and loaded...");
 
 }
 
 void MainWindow::openSvg()
 {
+    QVector<QPointF> points;
+    points << QPointF(10,10) << QPointF(20,40) << QPointF(30,10) << QPointF(50,20) << QPointF(40,80) << QPointF(70,20) << QPointF(10,40);
+    qBezierList.append( new QBezier(points , 32 ) );
+    svgItem->setQBezierList( qBezierList );
+
+    svgItem->setRect(0,0,80, 90);
+    qDebug() << "HW " << svgItem->rect();
+
+    ui->graphicsView->fitInView(svgItem, Qt::KeepAspectRatio);
+
     QString fileName = QFileDialog::getOpenFileName(this,
         tr("Open SVG"), "", tr("SVG File (*.svg)"));
 
@@ -155,7 +168,7 @@ void MainWindow::readSVG()
 
 
         svgItem->setLineList(lineList);
-        svgItem->setCircleList(circleList);
+        svgItem->setCircleList(circleList);        
         svgItem->setRect(0,0,width, height);
         qDebug() << "HW " << width << height << svgItem->rect();
 
@@ -168,24 +181,38 @@ void MainWindow::generateGCode()
     QStringList gcode;
 
     gcode << "G21 ; set units to millimeters";
-    gcode << "G28 ;home all axes";
+    //gcode << "G28 ;home all axes";
     gcode << "G0 Z5";
     gcode << "G90 ; use absolute coordinates";
     gcode << "G1 F1800.000";
-    gcode << "G1 Z1 F7800.000 ;lift up 1 mm";
+    gcode << QString("G1 Z%1 F7800.000 ;lift up %1 mm").arg(elevation,0,'f',3);
 
     //Do calculation here
     float dx = svgItem->rect().width()/2.0;
     float dy = svgItem->rect().height()/2.0;
 
     qDebug() << "Lines: " << lineList.size();
+    qDebug() << "Bezier curver: " << qBezierList.size();
 
     foreach(QLineF *line, lineList)
     {
-        gcode << QString("G1 X%1 Y%2 F540.000").arg(line->x1(),0, 'f', 3).arg(line->y1(),0, 'f', 3);
+        gcode << QString("G1 X%1 Y%2 F1800.000").arg(line->x1(),0, 'f', 3).arg(line->y1(),0, 'f', 3);
         gcode << "G1 Z0.350 F7800.000";
-        gcode << QString("G1 X%1 Y%2 F540.000").arg(line->x2(),0, 'f', 3).arg(line->y2(),0, 'f', 3);
-        gcode << "G1 Z1 F7800.000 ;lift up 1 mm";
+        gcode << QString("G1 X%1 Y%2 F1800.000").arg(line->x2(),0, 'f', 3).arg(line->y2(),0, 'f', 3);
+        gcode << QString("G1 Z%1 F1800.000 ;lift up %1 mm").arg(elevation,0,'f',3);
+    }
+
+    foreach(QBezier * bezier , qBezierList)
+    {
+        QPolygonF polygon = bezier->getPolygon();
+        gcode << QString("G1 X%1 Y%2 F1800.000").arg(polygon[0].x(),0, 'f', 3).arg(polygon[0].y(),0, 'f', 3);
+        gcode << "G1 Z0.350 F7800.000";
+        for(int i=1; i<polygon.size(); i++)
+        {
+            gcode << QString("G1 X%1 Y%2 F1800.000").arg(polygon[i].x(),0, 'f', 3).arg(polygon[i].y(),0, 'f', 3);
+        }
+
+        gcode << QString("G1 Z%1 F7800.000 ;lift up %1 mm").arg(elevation,0,'f',3);
     }
 
     gcode << "G1 Z10 F7800.000 ;Pull up z axis by 10mm";

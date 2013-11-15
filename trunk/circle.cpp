@@ -1,30 +1,24 @@
 #include "circle.h"
 
-Circle::Circle()
-    :QRectF()
-{
-}
-
-Circle::Circle(const QPointF &topLeft, const QPointF &bottomRight, double thickness)
-    :QRectF(topLeft, bottomRight)
+Circle::Circle(QPointF center, int steps, double radius, double thickness)
 {
     this->thickness = thickness;
+
+    double inc = (2.0 * M_PI) / (steps-1);
+    double theta = 0.0;
+    for(int i=0; i<steps-1; i++)
+    {
+
+        polygon << QPointF(
+                       center.x() + radius*qCos(theta),
+                       center.y() - radius*qSin(theta)
+                       );
+
+        theta += inc;
+    }
+
+    polygon << polygon[0];
+
+    //qDebug() << polygon;
 }
 
-Circle::Circle(const QPointF &topLeft, const QSizeF &size, double thickness)
-    :QRectF(topLeft, size)
-{
-    this->thickness = thickness;
-}
-
-Circle::Circle(const QRect &rectangle, double thickness)
-    :QRectF(rectangle)
-{
-    this->thickness = thickness;
-}
-
-Circle::Circle(qreal x, qreal y, qreal width, qreal height, double thickness)
-    :QRectF(x,y,width,height)
-{
-    this->thickness = thickness;
-}

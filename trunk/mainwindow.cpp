@@ -21,11 +21,12 @@ MainWindow::MainWindow(QWidget *parent) :
 
     ui->mainToolBar->addWidget( penWidth );
 
-    scene = new QGraphicsScene(0, 0, 800,600, this);
+    ui->graphicsView->setViewportUpdateMode( QGraphicsView::FullViewportUpdate );
+    scene = new QGraphicsScene(0, 0, 1200,1200, this);
     ui->graphicsView->setScene( scene );
 
     svgItem = new SvgItem();
-
+    svgItem->setRect(0,0,200,200);
     scene->addItem( svgItem );
 
 
@@ -36,12 +37,20 @@ MainWindow::MainWindow(QWidget *parent) :
 
 void MainWindow::openSvg()
 {
-    QVector<QPointF> points;
+    /*QVector<QPointF> points;
     points << QPointF(10,10) << QPointF(20,40) << QPointF(30,10) << QPointF(50,20) << QPointF(40,80) << QPointF(70,20) << QPointF(10,40);
     qBezierList.append( new QBezier(points , 32 ) );
-    svgItem->setQBezierList( qBezierList );
+    svgItem->setQBezierList( qBezierList );*/
 
-    svgItem->setRect(0,0,80, 90);
+    QPointF cp = QPointF(20,20);
+    Circle * c = new Circle(cp, 48, 20.0);
+    circleList.append(c);
+    svgItem->setCircleList(circleList);
+
+    //lineList.append( new Line(48,10, 48,5) );
+
+    //svgItem->setLineList(lineList);
+    //svgItem->setRect(0,0,80, 90);
     qDebug() << "HW " << svgItem->rect();
 
     ui->graphicsView->fitInView(svgItem, Qt::KeepAspectRatio);
@@ -91,27 +100,31 @@ void MainWindow::readSVG()
     float width = 0;
     float height = 0;
 
+    QPointF offset = QPointF(0,0);
+
     while (!xml.atEnd() && !xml.hasError())
     {
-        xml.readNext();
+
         if (xml.isStartElement())
         {
             QString name = xml.name().toString();
+
+            qDebug() << "Cname " << name;
             if (name == "line")
             {
-                qDebug() << "element name: '" << name;
+                //qDebug() << "element name: '" << name;
                 QXmlStreamAttributes attrib = xml.attributes();
                 QString style = attrib.value("style").toString();
 
                 double lineWidth = style.mid( style.indexOf("stroke-width:")+13, style.indexOf(";")-13  ).toDouble();
 
-                Line *line = new Line(attrib.value("x1").toFloat(), attrib.value("y1").toFloat(),
-                                      attrib.value("x2").toFloat(),attrib.value("y2").toFloat(),
+                Line *line = new Line(qAbs(attrib.value("x1").toDouble()), qAbs(attrib.value("y1").toDouble()),
+                                      qAbs(attrib.value("x2").toDouble()),qAbs(attrib.value("y2").toDouble()),
                                       lineWidth);
 
 
 
-                //qDebug() << "line: " << line;
+                qDebug() << "line: " << line->p1() << line->p2();
                 lineList.push_back(line);
 
 
@@ -122,25 +135,98 @@ void MainWindow::readSVG()
                                 (float)attrib.value("y2").toFloat());
 
             }
+            else if(name == "path")
+            {
+                QXmlStreamAttributes attrib = xml.attributes();
+                QString d = attrib.value("d").toString();
+                qDebug( )  << "path: " << d << d.length();
+                QStringList cmds;
+                int i = 0;
+                while(i < d.length())
+                {
+
+                    if(d[i] >= QChar('A')) //Captial A in ASCII
+                    {
+                        QString temp;
+                        do
+                        {
+                            if(d[i] != ',')
+                                temp.push_back( d[i] );
+                            else
+                                temp.push_back( ' ' );
+                            i++;
+                        } while(i < d.length() && d[i] < QChar('A'));
+                        i--;
+                        cmds << temp;
+                    }
+                    i++;
+                }
+
+                qDebug() << "CMDS" << cmds;
+
+                QPointF cPos = QPointF(0,0);
+                QPointF zPos = QPointF(0,0);
+                foreach(QString cmd, cmds)
+                {
+                    if(cmd[0] == 'M')
+                    {
+                        qDebug() << "M" << parseSVGNumbers(cmd);
+                        QVector<double> num = parseSVGNumbers(cmd);
+                        for(int i=0; i<num.size(); i+=2)
+                        {
+                            cPos = QPointF(num[i], num[i+1]);
+                            zPos = QPointF(num[i], num[i+1]);
+                        }
+                    }
+                    if(cmd[0] == 'C')
+                    {
+                        qDebug() << "C" << parseSVGNumbers(cmd);
+                        QVector<double> num = parseSVGNumbers(cmd);
+                        for(int i=0; i<num.size(); i+=6)
+                        {
+                            /*cPos = QPointF(num[i], num[i+1]);
+                            zPos = QPointF(num[i], num[i+1]);*/
+                            QVector<QPointF> points;
+                            points << cPos << QPointF(num[i], num[i+1]) << QPointF(num[i+2], num[i+3]) << QPointF(num[i+4], num[i+5]);
+                            QBezier *bezier = new QBezier(points, 32);
+                            cPos =  QPointF(num[i+4], num[i+5]);
+                            qBezierList.push_back( bezier );
+
+                            //qDebug() << "bez";
+                        }
+                    }
+                }
+
+            }
             else if (name == "circle")
             {
-                qDebug() << "element name: '" << name;
+                //qDebug() << "element name: '" << name;
                 QXmlStreamAttributes attrib = xml.attributes();
-                float diameter = attrib.value("r").toFloat();
-                Circle *circle = new Circle(attrib.value("cx").toFloat()-diameter/2, attrib.value("cy").toFloat()-diameter/2,
-                            diameter,diameter);
+                float radius = attrib.value("r").toFloat();
+                /*Circle *circle = new Circle(attrib.value("cx").toFloat()-diameter/2, attrib.value("cy").toFloat()-diameter/2,
+                            diameter,diameter);*/
+                Circle *circle = new Circle(
+                            QPointF(qAbs(attrib.value("cx").toDouble()), qAbs(attrib.value("cy").toDouble())),
+                            24,
+                            radius
+                            );
 
+                QRectF* cRect = new QRectF(attrib.value("cx").toFloat()-radius/2, attrib.value("cy").toFloat()-radius/2,
+                                                     radius,radius);
                 //qDebug() << "line: " << line;
+                //qDebug() << offset;
                 circleList.push_back(circle);
 
                 updateBoundary( width, height,
-                                circle->x(),
-                                circle->x()+circle->width(),
-                                circle->y(),
-                                circle->y()+circle->height()
+                                cRect->x(),
+                                cRect->x()+cRect->width(),
+                                cRect->y(),
+                                cRect->y()+cRect->height()
                             );
             }
         }
+
+        xml.readNext();
     }
 
     if (xml.hasError())
@@ -154,26 +240,39 @@ void MainWindow::readSVG()
 
         height  *= -1;
 
-        foreach(Line* line, lineList)
+        /*foreach(Line* line, lineList)
         {
             line->setPoints( QPointF(line->p1().x(), height+line->p1().y()),
                              QPointF(line->p2().x(), height+line->p2().y()));
-        }
+        }*/
 
-        foreach(Circle* circle, circleList)
+        /*foreach(Circle* circle, circleList)
         {
             circle->setRect( circle->x(), height+circle->y(), circle->width(), circle->height() );
-        }
+        }*/
 
 
 
         svgItem->setLineList(lineList);
-        svgItem->setCircleList(circleList);        
-        svgItem->setRect(0,0,width, height);
+        svgItem->setCircleList(circleList);
+        svgItem->setQBezierList( qBezierList );
+        //svgItem->setRect(0,0,width, height);
         qDebug() << "HW " << width << height << svgItem->rect();
 
         ui->graphicsView->fitInView(svgItem, Qt::KeepAspectRatio);
+        //ui->graphicsView->fitInView(QRectF(0,0,1200.0,1200.0), Qt::KeepAspectRatio);
     }
+}
+
+QVector<double> MainWindow::parseSVGNumbers(QString cmd)
+{
+    cmd = cmd.remove(0,1).trimmed();
+    QStringList numStr = cmd.split(" ");
+    QVector<double> num;
+    foreach(QString str, numStr)
+        num.push_back( qAbs(str.toDouble()) );
+
+    return num;
 }
 
 void MainWindow::generateGCode()
@@ -182,6 +281,7 @@ void MainWindow::generateGCode()
 
     gcode << "G21 ; set units to millimeters";
     //gcode << "G28 ;home all axes";
+    gcode << "G92 X0 Y0 Z10 ;set home position to 10mm above platform";
     gcode << "G0 Z5";
     gcode << "G90 ; use absolute coordinates";
     gcode << "G1 F1800.000";
@@ -205,6 +305,19 @@ void MainWindow::generateGCode()
     foreach(QBezier * bezier , qBezierList)
     {
         QPolygonF polygon = bezier->getPolygon();
+        gcode << QString("G1 X%1 Y%2 F1800.000").arg(polygon[0].x(),0, 'f', 3).arg(polygon[0].y(),0, 'f', 3);
+        gcode << "G1 Z0.350 F7800.000";
+        for(int i=1; i<polygon.size(); i++)
+        {
+            gcode << QString("G1 X%1 Y%2 F1800.000").arg(polygon[i].x(),0, 'f', 3).arg(polygon[i].y(),0, 'f', 3);
+        }
+
+        gcode << QString("G1 Z%1 F7800.000 ;lift up %1 mm").arg(elevation,0,'f',3);
+    }
+
+    foreach(Circle * circle , circleList)
+    {
+        QPolygonF polygon = circle->getPolygon();
         gcode << QString("G1 X%1 Y%2 F1800.000").arg(polygon[0].x(),0, 'f', 3).arg(polygon[0].y(),0, 'f', 3);
         gcode << "G1 Z0.350 F7800.000";
         for(int i=1; i<polygon.size(); i++)

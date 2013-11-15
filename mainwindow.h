@@ -27,6 +27,7 @@ class MainWindow : public QMainWindow
 public:
     explicit MainWindow(QWidget *parent = 0);
     ~MainWindow();
+    //enum Cmds { none, Move, move, Circle, circle };
 
 private slots:
     void openSvg();
@@ -34,6 +35,7 @@ private slots:
     void readSVG();
     void updateBoundary(float &w, float&h, float x1, float x2, float y1, float y2);
     void generateGCode();
+    QVector<double> parseSVGNumbers(QString cmd);
 
 private:
     Ui::MainWindow *ui;

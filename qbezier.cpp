@@ -26,7 +26,7 @@ QBezier::QBezier(QVector<QPointF> points, int steps)
 
     }
 
-    qDebug() << "Bezier: " << myPolygon << n;
+    //qDebug() << "Bezier: " << myPolygon << n;
 }
 
 int QBezier::binomialCoefficient(int n, int i)

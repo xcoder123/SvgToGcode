@@ -33,11 +33,12 @@ void SvgItem::paint(QPainter *painter, const QStyleOptionGraphicsItem *option, Q
     painter->setPen(pen);
     foreach(Circle* circle, circleList)
     {
-        QBrush brush = painter->brush();
+        /*QBrush brush = painter->brush();
         brush.setStyle(Qt::SolidPattern);
         painter->setBrush(brush);
 
-        painter->drawEllipse(circle->center(), circle->height(), circle->width());
+        painter->drawEllipse(circle->center(), circle->height(), circle->width());*/
+        painter->drawPolyline(circle->getPolygon());
     }
 
 

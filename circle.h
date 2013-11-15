@@ -3,22 +3,23 @@
 
 #include <QRectF>
 #include <QSizeF>
+#include <QtMath>
+#include <QPolygonF>
+#include <QDebug>
 
-class Circle : public QRectF
+class Circle
 {
 
 public:
-    Circle ();
-    Circle ( const QPointF & topLeft, const QSizeF & size, double thickness = 0.25 );
-    Circle ( const QPointF & topLeft, const QPointF & bottomRight, double thickness = 0.25 );
-    Circle ( qreal x, qreal y, qreal width, qreal height, double thickness = 0.25 );
-    Circle ( const QRect & rectangle, double thickness = 0.25 );
+    Circle (QPointF center, int steps, double radius, double thickness = 0.25);
+
 
     double getWidth() { return thickness; }
+    QPolygonF getPolygon() { return polygon; }
 
 private:
     double thickness;
-
+    QPolygonF polygon;
 
 };
 

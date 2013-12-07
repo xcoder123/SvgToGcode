@@ -18,14 +18,18 @@ SOURCES += main.cpp\
     gcodeviewer.cpp \
     line.cpp \
     circle.cpp \
-    qbezier.cpp
+    qbezier.cpp \
+    polygon.cpp \
+    transform.cpp
 
 HEADERS  += mainwindow.h \
     svgitem.h \
     gcodeviewer.h \
     line.h \
     circle.h \
-    qbezier.h
+    qbezier.h \
+    polygon.h \
+    transform.h
 
 FORMS    += mainwindow.ui \
     gcodeviewer.ui

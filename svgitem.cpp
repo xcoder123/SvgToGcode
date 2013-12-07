@@ -11,13 +11,20 @@ void SvgItem::paint(QPainter *painter, const QStyleOptionGraphicsItem *option, Q
 {
     painter->setRenderHint( QPainter::Antialiasing );
     QPen pen(Qt::black, 0.15, Qt::SolidLine, Qt::RoundCap, Qt::RoundJoin);
-    pen.setWidthF(0.15);
+    pen.setWidthF(0.5);
     painter->setPen(pen);
 
 
     foreach(QBezier *qbezier, qBezierList)
     {
+        //qDebug() << qbezier->getPolygon();
         painter->drawPolyline(qbezier->getPolygon());
+    }
+
+    foreach(Polygon *poly, polyList)
+    {
+        //qDebug() << qbezier->getPolygon();
+        painter->drawPolyline(poly->getPolygon());
     }
 
     foreach(Line* line, lineList)

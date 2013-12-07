@@ -33,6 +33,8 @@ MainWindow::MainWindow(QWidget *parent) :
     elevation = 2.2;
     qDebug() << tr("Application locked and loaded...");
 
+
+
 }
 
 void MainWindow::openSvg()
@@ -135,6 +137,70 @@ void MainWindow::readSVG()
                                 (float)attrib.value("y2").toFloat());
 
             }
+            else if(name == "polygon")
+            {
+                QXmlStreamAttributes attrib = xml.attributes();
+                QString pointsStr = attrib.value("points").toString();
+                pointsStr.replace(",", " ");
+                QVector<double> pointLst = parseSVGNumbers( pointsStr );
+                if(pointLst.size() % 2 == 0) //Is the number of cooridnates even?
+                {
+                    QPointF translate(0,0);
+                    if(attrib.hasAttribute("transform"))
+                    {
+                        Transform trans(attrib.value("transform").toString());
+                        translate = trans.getTranslate();
+                    }
+
+                    QVector<QPointF> points;
+                    for(int i = 0; i<pointLst.size(); i+=2)
+                    {
+                        points.push_back( QPointF(pointLst[i], pointLst[i+1]) );
+                    }
+
+                    Polygon* poly = new Polygon(points);
+                    poly->setTranslate( translate );
+                    polyList.push_back( poly );
+
+                    qDebug() << "Polygon:" << pointsStr << points;
+                }
+                else
+                {
+                    qDebug() << "Error, odd number of coordinates for polygon: " << pointLst;
+                }
+            }
+            else if(name == "polyline")
+            {
+                QXmlStreamAttributes attrib = xml.attributes();
+                QString pointsStr = attrib.value("points").toString();
+                pointsStr.replace(",", " ");
+                QVector<double> pointLst = parseSVGNumbers( pointsStr );
+                if(pointLst.size() % 2 == 0) //Is the number of cooridnates even?
+                {
+                    QPointF translate(0,0);
+                    if(attrib.hasAttribute("transform"))
+                    {
+                        Transform trans(attrib.value("transform").toString());
+                        translate = trans.getTranslate();
+                    }
+
+                    QVector<QPointF> points;
+                    for(int i = 0; i<pointLst.size(); i+=2)
+                    {
+                        points.push_back( QPointF(pointLst[i], pointLst[i+1]) );
+                    }
+
+                    Polygon* poly = new Polygon(points, false);
+                    poly->setTranslate( translate );
+                    polyList.push_back( poly );
+
+                    //qDebug() << "Polygon:" << pointsStr << points;
+                }
+                else
+                {
+                    qDebug() << "Error, odd number of coordinates for polygon: " << pointLst;
+                }
+            }
             else if(name == "path")
             {
                 QXmlStreamAttributes attrib = xml.attributes();
@@ -168,6 +234,7 @@ void MainWindow::readSVG()
                 QPointF zPos = QPointF(0,0);
                 foreach(QString cmd, cmds)
                 {
+                    qDebug() << cmd[0];
                     if(cmd[0] == 'M')
                     {
                         qDebug() << "M" << parseSVGNumbers(cmd);
@@ -176,6 +243,16 @@ void MainWindow::readSVG()
                         {
                             cPos = QPointF(num[i], num[i+1]);
                             zPos = QPointF(num[i], num[i+1]);
+                        }
+                    }
+                    if(cmd[0] == 'm')
+                    {
+                        qDebug() << "m" << parseSVGNumbers(cmd);
+                        QVector<double> num = parseSVGNumbers(cmd);
+                        for(int i=0; i<num.size(); i+=2)
+                        {
+                            cPos = cPos + QPointF(num[i], num[i+1]);
+                            zPos = cPos;
                         }
                     }
                     if(cmd[0] == 'C')
@@ -192,8 +269,38 @@ void MainWindow::readSVG()
                             cPos =  QPointF(num[i+4], num[i+5]);
                             qBezierList.push_back( bezier );
 
-                            //qDebug() << "bez";
+                            qDebug() << "shithole" << bezier->getPolygon();
                         }
+                    }
+                    if(cmd[0] == 'c')
+                    {
+                        qDebug() << "c" << parseSVGNumbers(cmd);
+                        QVector<double> num = parseSVGNumbers(cmd);
+                        for(int i=0; i<num.size(); i+=6)
+                        {
+                            qDebug() << cPos;
+                            /*cPos = QPointF(num[i], num[i+1]);
+                            zPos = QPointF(num[i], num[i+1]);*/
+                            QVector<QPointF> points;
+                            points << cPos
+                                   << cPos + QPointF(num[i], num[i+1])
+                                   << cPos + QPointF(num[i+2], num[i+3])
+                                   << cPos + QPointF(num[i+4], num[i+5]);
+
+                            QBezier *bezier = new QBezier(points, 32);
+                            qBezierList.push_back( bezier );
+
+                            cPos = cPos + QPointF(num[i+4], num[i+5]);
+
+                        }
+                    }
+                    if(cmd[0] == 'z' || cmd[0] == 'Z')
+                    {
+                        qDebug() << "z";
+                        Line * line = new Line(cPos, zPos); //Needs width at some point
+                        cPos = zPos;
+
+                        this->lineList.push_back( line );
                     }
                 }
 
@@ -256,6 +363,7 @@ void MainWindow::readSVG()
         svgItem->setLineList(lineList);
         svgItem->setCircleList(circleList);
         svgItem->setQBezierList( qBezierList );
+        svgItem->setPolygonList( polyList );
         //svgItem->setRect(0,0,width, height);
         qDebug() << "HW " << width << height << svgItem->rect();
 
@@ -266,11 +374,13 @@ void MainWindow::readSVG()
 
 QVector<double> MainWindow::parseSVGNumbers(QString cmd)
 {
-    cmd = cmd.remove(0,1).trimmed();
+    cmd = cmd.simplified();
+    cmd = cmd.trimmed();
     QStringList numStr = cmd.split(" ");
     QVector<double> num;
     foreach(QString str, numStr)
-        num.push_back( qAbs(str.toDouble()) );
+        //num.push_back( qAbs(str.toDouble()) ); // <-- honestly that was stupido.
+        num.push_back( str.toDouble() );
 
     return num;
 }

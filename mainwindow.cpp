@@ -31,8 +31,7 @@ MainWindow::MainWindow(QWidget *parent) :
 
 
     elevation = 2.2;
-    qDebug() << tr("Application locked and loaded...");
-
+    qDebug() << tr("Application locked and loaded...");   
 
 
 }
@@ -145,10 +144,11 @@ void MainWindow::readSVG()
                 QVector<double> pointLst = parseSVGNumbers( pointsStr );
                 if(pointLst.size() % 2 == 0) //Is the number of cooridnates even?
                 {
+                    Transform trans;
                     QPointF translate(0,0);
                     if(attrib.hasAttribute("transform"))
                     {
-                        Transform trans(attrib.value("transform").toString());
+                        trans = Transform(attrib.value("transform").toString());
                         translate = trans.getTranslate();
                     }
 
@@ -159,7 +159,13 @@ void MainWindow::readSVG()
                     }
 
                     Polygon* poly = new Polygon(points);
-                    poly->setTranslate( translate );
+                    poly->setTranslate( translate );                    
+                    if(trans.getMatrix().isSet == true)
+                        poly->setMatrix( trans.getMatrix() );
+                    if(trans.getRotate().angle != 0)
+                    {
+                        poly->setRotation( trans.getRotate() );
+                    }
                     polyList.push_back( poly );
 
                     qDebug() << "Polygon:" << pointsStr << points;
@@ -177,12 +183,14 @@ void MainWindow::readSVG()
                 QVector<double> pointLst = parseSVGNumbers( pointsStr );
                 if(pointLst.size() % 2 == 0) //Is the number of cooridnates even?
                 {
+                    Transform trans;
                     QPointF translate(0,0);
                     if(attrib.hasAttribute("transform"))
                     {
-                        Transform trans(attrib.value("transform").toString());
+                        trans = Transform(attrib.value("transform").toString());
                         translate = trans.getTranslate();
                     }
+
 
                     QVector<QPointF> points;
                     for(int i = 0; i<pointLst.size(); i+=2)
@@ -192,6 +200,10 @@ void MainWindow::readSVG()
 
                     Polygon* poly = new Polygon(points, false);
                     poly->setTranslate( translate );
+                    if(trans.getRotate().angle != 0)
+                    {
+                        poly->setRotation( trans.getRotate() );
+                    }
                     polyList.push_back( poly );
 
                     //qDebug() << "Polygon:" << pointsStr << points;
@@ -203,6 +215,7 @@ void MainWindow::readSVG()
             }
             else if(name == "path")
             {
+                //See this: http://www.w3.org/TR/SVG/paths.html#PathDataEllipticalArcCommands
                 QXmlStreamAttributes attrib = xml.attributes();
                 QString d = attrib.value("d").toString();
                 qDebug( )  << "path: " << d << d.length();
@@ -230,33 +243,90 @@ void MainWindow::readSVG()
 
                 qDebug() << "CMDS" << cmds;
 
-                QPointF cPos = QPointF(0,0);
-                QPointF zPos = QPointF(0,0);
+                QPointF cPos = QPointF(0,0); //CURRENT POSITION
+                QPointF zPos = QPointF(0,0); //Position of CLOSE PATH, used for Z command
                 foreach(QString cmd, cmds)
                 {
                     qDebug() << cmd[0];
-                    if(cmd[0] == 'M')
+                    if(cmd[0] == 'M') //Absolute MOVE
                     {
+                        // If a moveto is followed by multiple pairs of coordinates,
+                        //the subsequent pairs are treated as implicit lineto commands.
                         qDebug() << "M" << parseSVGNumbers(cmd);
                         QVector<double> num = parseSVGNumbers(cmd);
                         for(int i=0; i<num.size(); i+=2)
                         {
-                            cPos = QPointF(num[i], num[i+1]);
-                            zPos = QPointF(num[i], num[i+1]);
+                            if(i == 0) //If it's only first move, don't draw
+                            {
+                                cPos = QPointF(num[i], num[i+1]);
+                                zPos = QPointF(num[i], num[i+1]);
+                            }
+                            else //Multiple moves = lineto command
+                            {
+                                QVector<QPointF> points;
+                                points << cPos << QPointF(num[i], num[i+1]);
+                                Polygon *poly = new Polygon(points, false);
+                                cPos =  QPointF(num[i], num[i+1]);
+                                //Apperantly, only the first point counts as new Z value.
+                                //Couldn't find that in documentation, though. Strange.
+                                //zPos = cPos;
+                                polyList.push_back( poly );
+                            }
                         }
                     }
-                    if(cmd[0] == 'm')
+                    if(cmd[0] == 'm') //Relative move
                     {
+                        // If a moveto is followed by multiple pairs of coordinates,
+                        //the subsequent pairs are treated as implicit lineto commands.
                         qDebug() << "m" << parseSVGNumbers(cmd);
                         QVector<double> num = parseSVGNumbers(cmd);
                         for(int i=0; i<num.size(); i+=2)
                         {
-                            cPos = cPos + QPointF(num[i], num[i+1]);
-                            zPos = cPos;
+                            if(i == 0) //If it's only first move, don't draw
+                            {
+                                cPos = cPos + QPointF(num[i], num[i+1]);
+                                zPos = cPos;
+                            }
+                            else //Multiple moves = lineto command
+                            {
+                                QVector<QPointF> points;
+                                points << cPos <<cPos + QPointF(num[i], num[i+1]);
+                                Polygon *poly = new Polygon(points, false);
+                                cPos =  cPos + QPointF(num[i], num[i+1]);
+                                //zPos = cPos;
+                                polyList.push_back( poly );
+                            }
                         }
                     }
-                    if(cmd[0] == 'C')
+                    if(cmd[0] == 'L')
                     {
+                        qDebug() << "L" << parseSVGNumbers(cmd);
+                        QVector<double> num = parseSVGNumbers(cmd);
+                        for(int i=0; i<num.size(); i+=2)
+                        {
+                            QVector<QPointF> points;
+                            points << cPos <<  QPointF(num[i], num[i+1]);
+                            Polygon *poly = new Polygon(points, false);
+                            cPos =  QPointF(num[i], num[i+1]);
+                            polyList.push_back( poly );
+                        }
+                    }
+                    if(cmd[0] == 'l')
+                    {
+                        qDebug() << "l" << parseSVGNumbers(cmd);
+                        QVector<double> num = parseSVGNumbers(cmd);
+                        for(int i=0; i<num.size(); i+=2)
+                        {
+                            QVector<QPointF> points;
+                            points << cPos <<cPos + QPointF(num[i], num[i+1]);
+                            Polygon *poly = new Polygon(points, false);
+                            cPos =  cPos + QPointF(num[i], num[i+1]);
+                            polyList.push_back( poly );
+                        }
+                    }
+                    if(cmd[0] == 'C') //Absolute cubic Bezier curve
+                    {
+                        //I think bezier curve might be auto filled, basically automaticaly Z cmd is initiated
                         qDebug() << "C" << parseSVGNumbers(cmd);
                         QVector<double> num = parseSVGNumbers(cmd);
                         for(int i=0; i<num.size(); i+=6)
@@ -272,8 +342,9 @@ void MainWindow::readSVG()
                             qDebug() << "shithole" << bezier->getPolygon();
                         }
                     }
-                    if(cmd[0] == 'c')
+                    if(cmd[0] == 'c') //Relative cubic Bezier curve
                     {
+                        //I think bezier curve might be auto filled, basically automaticaly Z cmd is initiated
                         qDebug() << "c" << parseSVGNumbers(cmd);
                         QVector<double> num = parseSVGNumbers(cmd);
                         for(int i=0; i<num.size(); i+=6)
@@ -374,8 +445,11 @@ void MainWindow::readSVG()
 
 QVector<double> MainWindow::parseSVGNumbers(QString cmd)
 {
-    cmd = cmd.simplified();
+    cmd.replace(QRegExp("[a-zA-Z]"), "");
+    //qDebug( ) << "COMMAND " << cmd;
     cmd = cmd.trimmed();
+    cmd = cmd.simplified();
+
     QStringList numStr = cmd.split(" ");
     QVector<double> num;
     foreach(QString str, numStr)

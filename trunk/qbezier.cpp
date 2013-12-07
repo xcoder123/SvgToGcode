@@ -6,14 +6,14 @@
 QBezier::QBezier(QVector<QPointF> points, int steps)
 {
     int n = points.size()-1;
-    for(double t=0; t<1; t+=1.0/steps)
+    for(double t=0; t<=1; t+=1.0/steps) // t = [0,1] !!! not [0, 1) brainfail. I was thinking why the hell there are spaces.
     {
         QPointF newP;
 
         for(int i=0; i<=n; i++)
         {
-            newP.setX( newP.x() + points[i].x()*qPow(1.0-t,n-i)*qPow(t,i)*binomialCoefficient(n, i) );
-            newP.setY( newP.y() + points[i].y()*qPow(1.0-t,n-i)*qPow(t,i)*binomialCoefficient(n, i) );
+            newP.setX( newP.x() + points[i].x()*qPow(1.0-t,n-i)*qPow(t,i)*double(binomialCoefficient(n, i)) );
+            newP.setY( newP.y() + points[i].y()*qPow(1.0-t,n-i)*qPow(t,i)*double(binomialCoefficient(n, i)) );
         }
         /*QPointF p0 = points.at(0);
         QPointF p1 = points.at(1);

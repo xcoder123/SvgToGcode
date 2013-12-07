@@ -7,6 +7,7 @@
 #include <QDebug>
 #include "circle.h"
 #include "qbezier.h"
+#include "polygon.h"
 
 class SvgItem : public QGraphicsRectItem
 {
@@ -25,11 +26,13 @@ public slots:
     void setLineList(QList<Line*> list) { lineList = list; }
     void setCircleList(QList<Circle*> list) { circleList = list; }
     void setQBezierList(QList<QBezier*> list) { qBezierList = list; }
+    void setPolygonList(QList<Polygon*> list) { polyList = list; }
 
 private:
     QList<Line*> lineList;
     QList<Circle*> circleList;
     QList<QBezier*> qBezierList;
+    QList<Polygon*> polyList;
 
 };
 

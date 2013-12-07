@@ -14,6 +14,9 @@
 #include "line.h"
 #include "circle.h"
 #include "qbezier.h"
+#include "polygon.h"
+#include "transform.h"
+#include <QString>
 
 
 namespace Ui {
@@ -45,6 +48,7 @@ private:
     QList<Line*> lineList;
     QList<Circle*> circleList;
     QList<QBezier*> qBezierList;
+    QList<Polygon*> polyList;
     double elevation;
 };
 

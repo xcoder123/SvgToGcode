@@ -17,6 +17,7 @@
 #include "polygon.h"
 #include "transform.h"
 #include <QString>
+#include "arc.h"
 
 
 namespace Ui {
@@ -49,6 +50,7 @@ private:
     QList<Circle*> circleList;
     QList<QBezier*> qBezierList;
     QList<Polygon*> polyList;
+    QList<Arc*> arcList;
     double elevation;
 };
 

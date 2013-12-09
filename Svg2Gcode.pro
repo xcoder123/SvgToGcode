@@ -20,7 +20,8 @@ SOURCES += main.cpp\
     circle.cpp \
     qbezier.cpp \
     polygon.cpp \
-    transform.cpp
+    transform.cpp \
+    arc.cpp
 
 HEADERS  += mainwindow.h \
     svgitem.h \
@@ -29,7 +30,8 @@ HEADERS  += mainwindow.h \
     circle.h \
     qbezier.h \
     polygon.h \
-    transform.h
+    transform.h \
+    arc.h
 
 FORMS    += mainwindow.ui \
     gcodeviewer.ui

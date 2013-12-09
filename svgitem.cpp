@@ -27,6 +27,12 @@ void SvgItem::paint(QPainter *painter, const QStyleOptionGraphicsItem *option, Q
         painter->drawPolyline(poly->getPolygon());
     }
 
+    foreach(Arc *arc, arcList)
+    {
+        //qDebug() << qbezier->getPolygon();
+        painter->drawPolyline(arc->getPolygon());
+    }
+
     foreach(Line* line, lineList)
     {
         pen.setWidthF( line->getWidth() );

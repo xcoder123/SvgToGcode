@@ -34,6 +34,8 @@ MainWindow::MainWindow(QWidget *parent) :
     qDebug() << tr("Application locked and loaded...");   
 
 
+
+
 }
 
 void MainWindow::openSvg()
@@ -47,6 +49,9 @@ void MainWindow::openSvg()
     Circle * c = new Circle(cp, 48, 20.0);
     circleList.append(c);
     svgItem->setCircleList(circleList);
+    Arc *arc = new Arc(QPointF(150,150), 0, 1, 0, QPointF(300,50), QPointF(150,200));
+    arcList.push_back( arc );
+    svgItem->setArcList( arcList );
 
     //lineList.append( new Line(48,10, 48,5) );
 
@@ -97,6 +102,11 @@ void MainWindow::readSVG()
 {
     lineList.clear();
     circleList.clear();
+    qBezierList.clear();
+    polyList.clear();
+    arcList.clear();
+
+    QStringList commandsUSED;
 
     float width = 0;
     float height = 0;
@@ -248,6 +258,7 @@ void MainWindow::readSVG()
                 foreach(QString cmd, cmds)
                 {
                     qDebug() << cmd[0];
+                    commandsUSED.push_back( cmd.mid(0,1) );
                     if(cmd[0] == 'M') //Absolute MOVE
                     {
                         // If a moveto is followed by multiple pairs of coordinates,
@@ -298,7 +309,83 @@ void MainWindow::readSVG()
                             }
                         }
                     }
-                    if(cmd[0] == 'L')
+                    if(cmd[0] == 'H') //Absolute horizontal line
+                    {
+                        qDebug() << "H" << parseSVGNumbers(cmd);
+                        QVector<double> num = parseSVGNumbers(cmd);
+                        for(int i=0; i<num.size(); i+=1)
+                        {
+                            QVector<QPointF> points;
+                            points << cPos <<  QPointF(num[i], cPos.y());
+                            Polygon *poly = new Polygon(points, false);
+                            cPos =  QPointF(num[i], cPos.y());
+                            polyList.push_back( poly );
+                        }
+                    }
+                    if(cmd[0] == 'h') //relative horizontal line
+                    {
+                        qDebug() << "h" << parseSVGNumbers(cmd);
+                        QVector<double> num = parseSVGNumbers(cmd);
+                        for(int i=0; i<num.size(); i+=1)
+                        {
+                            QVector<QPointF> points;
+                            points << cPos <<cPos + QPointF(num[i],0);
+                            Polygon *poly = new Polygon(points, false);
+                            cPos =  cPos + QPointF(num[i], 0);
+                            polyList.push_back( poly );
+                        }
+                    }
+                    if(cmd[0] == 'V') //Absolute vertical line
+                    {
+                        qDebug() << "V" << parseSVGNumbers(cmd);
+                        QVector<double> num = parseSVGNumbers(cmd);
+                        for(int i=0; i<num.size(); i+=1)
+                        {
+                            QVector<QPointF> points;
+                            points << cPos <<  QPointF(cPos.x(), num[i]);
+                            Polygon *poly = new Polygon(points, false);
+                            cPos =  QPointF(cPos.x() , num[i]);
+                            polyList.push_back( poly );
+                        }
+                    }
+                    if(cmd[0] == 'v') //relative vertical line
+                    {
+                        qDebug() << "v" << parseSVGNumbers(cmd);
+                        QVector<double> num = parseSVGNumbers(cmd);
+                        for(int i=0; i<num.size(); i+=1)
+                        {
+                            QVector<QPointF> points;
+                            points << cPos <<cPos + QPointF(0 , num[i]);
+                            Polygon *poly = new Polygon(points, false);
+                            cPos =  cPos + QPointF(0, num[i]);
+                            polyList.push_back( poly );
+                        }
+                    }
+                    if(cmd[0] == 'A')
+                    {
+                        qDebug() << "A" << parseSVGNumbers(cmd);
+                        QVector<double> num = parseSVGNumbers(cmd);
+                        for(int i=0; i<num.size(); i+=7)
+                        {
+                            Arc * arc = new Arc(QPointF(num[i], num[i+1]), num[i+2], num[i+3], num[i+4],
+                                    QPointF(num[i+5], num[i+6]), cPos);
+                            cPos =  QPointF(num[i+5], num[i+6]);
+                            arcList.push_back( arc );
+                        }
+                    }
+                    if(cmd[0] == 'a')
+                    {
+                        qDebug() << "a" << parseSVGNumbers(cmd);
+                        QVector<double> num = parseSVGNumbers(cmd);
+                        for(int i=0; i<num.size(); i+=7)
+                        {
+                            Arc * arc = new Arc(QPointF(num[i], num[i+1]), num[i+2], num[i+3], num[i+4],
+                                    cPos+QPointF(num[i+5], num[i+6]), cPos);
+                            cPos =  cPos + QPointF(num[i+5], num[i+6]);
+                            arcList.push_back( arc );
+                        }
+                    }
+                    if(cmd[0] == 'L') //Line to Absolute
                     {
                         qDebug() << "L" << parseSVGNumbers(cmd);
                         QVector<double> num = parseSVGNumbers(cmd);
@@ -311,7 +398,7 @@ void MainWindow::readSVG()
                             polyList.push_back( poly );
                         }
                     }
-                    if(cmd[0] == 'l')
+                    if(cmd[0] == 'l') // line to relative
                     {
                         qDebug() << "l" << parseSVGNumbers(cmd);
                         QVector<double> num = parseSVGNumbers(cmd);
@@ -435,9 +522,11 @@ void MainWindow::readSVG()
         svgItem->setCircleList(circleList);
         svgItem->setQBezierList( qBezierList );
         svgItem->setPolygonList( polyList );
+        svgItem->setArcList( arcList );
         //svgItem->setRect(0,0,width, height);
         qDebug() << "HW " << width << height << svgItem->rect();
 
+        qDebug() << "commands used: " << commandsUSED.toSet();
         ui->graphicsView->fitInView(svgItem, Qt::KeepAspectRatio);
         //ui->graphicsView->fitInView(QRectF(0,0,1200.0,1200.0), Qt::KeepAspectRatio);
     }

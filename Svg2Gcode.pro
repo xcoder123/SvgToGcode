@@ -21,7 +21,8 @@ SOURCES += main.cpp\
     qbezier.cpp \
     polygon.cpp \
     transform.cpp \
-    arc.cpp
+    arc.cpp \
+    basicpolygon.cpp
 
 HEADERS  += mainwindow.h \
     svgitem.h \
@@ -31,7 +32,8 @@ HEADERS  += mainwindow.h \
     qbezier.h \
     polygon.h \
     transform.h \
-    arc.h
+    arc.h \
+    basicpolygon.h
 
 FORMS    += mainwindow.ui \
     gcodeviewer.ui

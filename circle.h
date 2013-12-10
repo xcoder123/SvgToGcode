@@ -6,20 +6,20 @@
 #include <QtMath>
 #include <QPolygonF>
 #include <QDebug>
+#include "basicpolygon.h"
 
-class Circle
+class Circle : public BasicPolygon
 {
 
 public:
-    Circle (QPointF center, int steps, double radius, double thickness = 0.25);
+    Circle (QPointF center, int steps, double rx, double ry, double thickness = 0.25);
 
 
     double getWidth() { return thickness; }
-    QPolygonF getPolygon() { return polygon; }
 
 private:
     double thickness;
-    QPolygonF polygon;
+
 
 };
 

@@ -18,6 +18,7 @@
 #include "transform.h"
 #include <QString>
 #include "arc.h"
+#include "basicpolygon.h"
 
 
 namespace Ui {
@@ -40,6 +41,8 @@ private slots:
     void updateBoundary(float &w, float&h, float x1, float x2, float y1, float y2);
     void generateGCode();
     QVector<double> parseSVGNumbers(QString cmd);
+    Transform getTransforms(QXmlStreamAttributes &attrib);
+    QList<BasicPolygon*> searchPolygons(BasicPolygon *previous, QList<BasicPolygon*> fullLst);
 
 private:
     Ui::MainWindow *ui;
@@ -49,7 +52,7 @@ private:
     QList<Line*> lineList;
     QList<Circle*> circleList;
     QList<QBezier*> qBezierList;
-    QList<Polygon*> polyList;
+    QList<BasicPolygon*> polyList;
     QList<Arc*> arcList;
     double elevation;
 };

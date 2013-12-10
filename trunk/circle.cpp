@@ -1,6 +1,6 @@
 #include "circle.h"
 
-Circle::Circle(QPointF center, int steps, double radius, double thickness)
+Circle::Circle(QPointF center, int steps, double rx, double ry, double thickness)
 {
     this->thickness = thickness;
 
@@ -9,15 +9,15 @@ Circle::Circle(QPointF center, int steps, double radius, double thickness)
     for(int i=0; i<steps-1; i++)
     {
 
-        polygon << QPointF(
-                       center.x() + radius*qCos(theta),
-                       center.y() - radius*qSin(theta)
+        myPolygon << QPointF(
+                       center.x() + rx*qCos(theta),
+                       center.y() - ry*qSin(theta)
                        );
 
         theta += inc;
     }
 
-    polygon << polygon[0];
+    myPolygon << myPolygon[0];
 
     //qDebug() << polygon;
 }

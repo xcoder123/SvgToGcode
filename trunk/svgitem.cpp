@@ -15,23 +15,28 @@ void SvgItem::paint(QPainter *painter, const QStyleOptionGraphicsItem *option, Q
     painter->setPen(pen);
 
 
-    foreach(QBezier *qbezier, qBezierList)
-    {
-        //qDebug() << qbezier->getPolygon();
-        painter->drawPolyline(qbezier->getPolygon());
-    }
+//    foreach(QBezier *qbezier, qBezierList)
+//    {
+//        //qDebug() << qbezier->getPolygon();
+//        painter->drawPolyline(qbezier->getPolygon());
+//    }
 
-    foreach(Polygon *poly, polyList)
+    foreach(BasicPolygon *poly, polyList)
     {
         //qDebug() << qbezier->getPolygon();
         painter->drawPolyline(poly->getPolygon());
     }
 
-    foreach(Arc *arc, arcList)
-    {
-        //qDebug() << qbezier->getPolygon();
-        painter->drawPolyline(arc->getPolygon());
-    }
+//    foreach(Arc *arc, arcList)
+//    {
+//        //qDebug() << qbezier->getPolygon();
+//        painter->drawPolyline(arc->getPolygon());
+//    }
+
+//    foreach(BasicPolygon* poly, polygons)
+//    {
+//        painter->drawPolyline( poly->getPolygon() );
+//    }
 
     foreach(Line* line, lineList)
     {

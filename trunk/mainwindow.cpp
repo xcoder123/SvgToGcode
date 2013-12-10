@@ -46,7 +46,7 @@ void MainWindow::openSvg()
     svgItem->setQBezierList( qBezierList );*/
 
     QPointF cp = QPointF(20,20);
-    Circle * c = new Circle(cp, 48, 20.0);
+    Circle * c = new Circle(cp, 48, 20.0, 20.0);
     circleList.append(c);
     svgItem->setCircleList(circleList);
     Arc *arc = new Arc(QPointF(150,150), 0, 1, 0, QPointF(300,50), QPointF(150,200));
@@ -105,6 +105,7 @@ void MainWindow::readSVG()
     qBezierList.clear();
     polyList.clear();
     arcList.clear();
+
 
     QStringList commandsUSED;
 
@@ -223,6 +224,27 @@ void MainWindow::readSVG()
                     qDebug() << "Error, odd number of coordinates for polygon: " << pointLst;
                 }
             }
+            else if(name == "ellipse")
+            {
+                //qDebug() << "element name: '" << name;
+                QXmlStreamAttributes attrib = xml.attributes();
+                float rx = attrib.value("rx").toFloat();
+                float ry = attrib.value("rx").toFloat();
+                /*Circle *circle = new Circle(attrib.value("cx").toFloat()-diameter/2, attrib.value("cy").toFloat()-diameter/2,
+                            diameter,diameter);*/
+                Circle *ellipse = new Circle(
+                            QPointF(qAbs(attrib.value("cx").toDouble()), qAbs(attrib.value("cy").toDouble())),
+                            24,
+                            rx,
+                            ry
+                            );
+
+                QRectF* cRect = new QRectF(attrib.value("cx").toFloat()-rx/2, attrib.value("cy").toFloat()-ry/2,
+                                                     rx,ry);
+                //qDebug() << "line: " << line;
+                //qDebug() << offset;
+                circleList.push_back(ellipse);
+            }
             else if(name == "path")
             {
                 //See this: http://www.w3.org/TR/SVG/paths.html#PathDataEllipticalArcCommands
@@ -253,8 +275,11 @@ void MainWindow::readSVG()
 
                 qDebug() << "CMDS" << cmds;
 
+                Transform transformations = getTransforms( attrib );
+
                 QPointF cPos = QPointF(0,0); //CURRENT POSITION
                 QPointF zPos = QPointF(0,0); //Position of CLOSE PATH, used for Z command
+                QPointF sPos = QPointF(0,0); //Position for S/s command, the second point of previous curve.
                 foreach(QString cmd, cmds)
                 {
                     qDebug() << cmd[0];
@@ -281,6 +306,9 @@ void MainWindow::readSVG()
                                 //Apperantly, only the first point counts as new Z value.
                                 //Couldn't find that in documentation, though. Strange.
                                 //zPos = cPos;
+
+                                    poly->applyTransformations( transformations );
+
                                 polyList.push_back( poly );
                             }
                         }
@@ -305,6 +333,8 @@ void MainWindow::readSVG()
                                 Polygon *poly = new Polygon(points, false);
                                 cPos =  cPos + QPointF(num[i], num[i+1]);
                                 //zPos = cPos;
+
+                                    poly->applyTransformations( transformations );
                                 polyList.push_back( poly );
                             }
                         }
@@ -319,6 +349,8 @@ void MainWindow::readSVG()
                             points << cPos <<  QPointF(num[i], cPos.y());
                             Polygon *poly = new Polygon(points, false);
                             cPos =  QPointF(num[i], cPos.y());
+
+                                poly->applyTransformations( transformations );
                             polyList.push_back( poly );
                         }
                     }
@@ -332,6 +364,8 @@ void MainWindow::readSVG()
                             points << cPos <<cPos + QPointF(num[i],0);
                             Polygon *poly = new Polygon(points, false);
                             cPos =  cPos + QPointF(num[i], 0);
+
+                                poly->applyTransformations( transformations );
                             polyList.push_back( poly );
                         }
                     }
@@ -345,6 +379,8 @@ void MainWindow::readSVG()
                             points << cPos <<  QPointF(cPos.x(), num[i]);
                             Polygon *poly = new Polygon(points, false);
                             cPos =  QPointF(cPos.x() , num[i]);
+
+                                poly->applyTransformations( transformations );
                             polyList.push_back( poly );
                         }
                     }
@@ -358,6 +394,8 @@ void MainWindow::readSVG()
                             points << cPos <<cPos + QPointF(0 , num[i]);
                             Polygon *poly = new Polygon(points, false);
                             cPos =  cPos + QPointF(0, num[i]);
+
+                                poly->applyTransformations( transformations );
                             polyList.push_back( poly );
                         }
                     }
@@ -370,7 +408,12 @@ void MainWindow::readSVG()
                             Arc * arc = new Arc(QPointF(num[i], num[i+1]), num[i+2], num[i+3], num[i+4],
                                     QPointF(num[i+5], num[i+6]), cPos);
                             cPos =  QPointF(num[i+5], num[i+6]);
-                            arcList.push_back( arc );
+
+
+                                arc->applyTransformations( transformations );
+
+                            //arcList.push_back( arc );
+                                polyList.push_back( arc );
                         }
                     }
                     if(cmd[0] == 'a')
@@ -382,7 +425,12 @@ void MainWindow::readSVG()
                             Arc * arc = new Arc(QPointF(num[i], num[i+1]), num[i+2], num[i+3], num[i+4],
                                     cPos+QPointF(num[i+5], num[i+6]), cPos);
                             cPos =  cPos + QPointF(num[i+5], num[i+6]);
-                            arcList.push_back( arc );
+
+
+                                arc->applyTransformations( transformations );
+
+                            //arcList.push_back( arc );
+                                polyList.push_back( arc );
                         }
                     }
                     if(cmd[0] == 'L') //Line to Absolute
@@ -395,6 +443,10 @@ void MainWindow::readSVG()
                             points << cPos <<  QPointF(num[i], num[i+1]);
                             Polygon *poly = new Polygon(points, false);
                             cPos =  QPointF(num[i], num[i+1]);
+
+
+                                poly->applyTransformations( transformations );
+
                             polyList.push_back( poly );
                         }
                     }
@@ -408,6 +460,10 @@ void MainWindow::readSVG()
                             points << cPos <<cPos + QPointF(num[i], num[i+1]);
                             Polygon *poly = new Polygon(points, false);
                             cPos =  cPos + QPointF(num[i], num[i+1]);
+
+
+                                poly->applyTransformations( transformations );
+
                             polyList.push_back( poly );
                         }
                     }
@@ -424,9 +480,15 @@ void MainWindow::readSVG()
                             points << cPos << QPointF(num[i], num[i+1]) << QPointF(num[i+2], num[i+3]) << QPointF(num[i+4], num[i+5]);
                             QBezier *bezier = new QBezier(points, 32);
                             cPos =  QPointF(num[i+4], num[i+5]);
-                            qBezierList.push_back( bezier );
+                            sPos = QPointF( num[i+2], num[i+3] );
 
-                            qDebug() << "shithole" << bezier->getPolygon();
+
+                                bezier->applyTransformations( transformations );
+
+                            //qBezierList.push_back( bezier );
+                                polyList.push_back( bezier );
+
+
                         }
                     }
                     if(cmd[0] == 'c') //Relative cubic Bezier curve
@@ -446,19 +508,92 @@ void MainWindow::readSVG()
                                    << cPos + QPointF(num[i+4], num[i+5]);
 
                             QBezier *bezier = new QBezier(points, 32);
-                            qBezierList.push_back( bezier );
+
+
+                                bezier->applyTransformations( transformations );
+
+                            //qBezierList.push_back( bezier );
+                            polyList.push_back( bezier );
 
                             cPos = cPos + QPointF(num[i+4], num[i+5]);
+                            sPos = cPos + QPointF( num[i+2], num[i+3] );
+
+                        }
+                    }
+                    if(cmd[0] == 'S') //Absolute shorthand cubic Bezier curve
+                    {
+                        //I think bezier curve might be auto filled, basically automaticaly Z cmd is initiated
+                        qDebug() << "S" << parseSVGNumbers(cmd);
+                        QVector<double> num = parseSVGNumbers(cmd);
+                        for(int i=0; i<num.size(); i+=4)
+                        {
+                            qDebug() << cPos;
+                            /*cPos = QPointF(num[i], num[i+1]);
+                            zPos = QPointF(num[i], num[i+1]);*/
+                            QVector<QPointF> points;
+                            points << cPos
+                                   << 2*cPos - sPos
+                                   << QPointF(num[i], num[i+1])
+                                   << QPointF(num[i+2], num[i+3]);
+
+                            QBezier *bezier = new QBezier(points, 32);
+
+
+
+                                bezier->applyTransformations( transformations );
+
+                            //qBezierList.push_back( bezier );
+                                polyList.push_back( bezier );
+
+                            sPos = QPointF(num[i], num[i+1]);
+                            cPos = QPointF( num[i+2], num[i+3] );
+
+                        }
+                    }
+                    if(cmd[0] == 's') //relative shorthand cubic Bezier curve
+                    {
+                        //I think bezier curve might be auto filled, basically automaticaly Z cmd is initiated
+                        qDebug() << "s" << parseSVGNumbers(cmd);
+                        QVector<double> num = parseSVGNumbers(cmd);
+                        for(int i=0; i<num.size(); i+=4)
+                        {
+                            qDebug() << cPos;
+                            /*cPos = QPointF(num[i], num[i+1]);
+                            zPos = QPointF(num[i], num[i+1]);*/
+                            QVector<QPointF> points;
+                            points << cPos
+                                   << 2*cPos - sPos
+                                   << cPos + QPointF(num[i], num[i+1])
+                                   << cPos + QPointF(num[i+2], num[i+3]);
+
+                            QBezier *bezier = new QBezier(points, 32);
+
+
+                                bezier->applyTransformations( transformations );
+
+                            //qBezierList.push_back( bezier );
+                                polyList.push_back( bezier );
+
+                            sPos = cPos + QPointF(num[i], num[i+1]);
+                            cPos = cPos + QPointF( num[i+2], num[i+3] );
 
                         }
                     }
                     if(cmd[0] == 'z' || cmd[0] == 'Z')
                     {
                         qDebug() << "z";
-                        Line * line = new Line(cPos, zPos); //Needs width at some point
+                        QVector<QPointF> points;
+                        points << cPos <<zPos;
+                        Polygon *poly = new Polygon(points, false);
+
+                        //Line * line = new Polygon(cPos, zPos); //Needs width at some point
                         cPos = zPos;
 
-                        this->lineList.push_back( line );
+
+                            poly->applyTransformations( transformations );
+
+                        polyList.push_back( poly );
+                        //this->lineList.push_back( line );
                     }
                 }
 
@@ -473,6 +608,7 @@ void MainWindow::readSVG()
                 Circle *circle = new Circle(
                             QPointF(qAbs(attrib.value("cx").toDouble()), qAbs(attrib.value("cy").toDouble())),
                             24,
+                            radius,
                             radius
                             );
 
@@ -480,7 +616,8 @@ void MainWindow::readSVG()
                                                      radius,radius);
                 //qDebug() << "line: " << line;
                 //qDebug() << offset;
-                circleList.push_back(circle);
+                //circleList.push_back(circle);
+                polyList.push_back( circle );
 
                 updateBoundary( width, height,
                                 cRect->x(),
@@ -535,6 +672,7 @@ void MainWindow::readSVG()
 QVector<double> MainWindow::parseSVGNumbers(QString cmd)
 {
     cmd.replace(QRegExp("[a-zA-Z]"), "");
+    cmd.replace("-", " -");
     //qDebug( ) << "COMMAND " << cmd;
     cmd = cmd.trimmed();
     cmd = cmd.simplified();
@@ -546,6 +684,17 @@ QVector<double> MainWindow::parseSVGNumbers(QString cmd)
         num.push_back( str.toDouble() );
 
     return num;
+}
+
+Transform MainWindow::getTransforms(QXmlStreamAttributes &attrib)
+{
+    Transform trans;
+    if(attrib.hasAttribute("transform"))
+    {
+        trans = Transform(attrib.value("transform").toString());
+    }
+
+    return trans;
 }
 
 void MainWindow::generateGCode()
@@ -575,9 +724,45 @@ void MainWindow::generateGCode()
         gcode << QString("G1 Z%1 F1800.000 ;lift up %1 mm").arg(elevation,0,'f',3);
     }
 
-    foreach(QBezier * bezier , qBezierList)
+//    foreach(QBezier * bezier , qBezierList)
+//    {
+//        QPolygonF polygon = bezier->getPolygon();
+//        gcode << QString("G1 X%1 Y%2 F1800.000").arg(polygon[0].x(),0, 'f', 3).arg(polygon[0].y(),0, 'f', 3);
+//        gcode << "G1 Z0.350 F7800.000";
+//        for(int i=1; i<polygon.size(); i++)
+//        {
+//            gcode << QString("G1 X%1 Y%2 F1800.000").arg(polygon[i].x(),0, 'f', 3).arg(polygon[i].y(),0, 'f', 3);
+//        }
+
+//        gcode << QString("G1 Z%1 F7800.000 ;lift up %1 mm").arg(elevation,0,'f',3);
+//    }
+
+    QList< QList<BasicPolygon*> > optimizedPoly;
+
+    QList<BasicPolygon*> tempPoly = polyList;
+    int polyCount = 0;
+    while(tempPoly.size())
     {
-        QPolygonF polygon = bezier->getPolygon();
+        QList<BasicPolygon*> tmpPolyLst;
+
+        tmpPolyLst = searchPolygons( tempPoly.first(), tempPoly );
+
+        optimizedPoly.append(tmpPolyLst  );
+
+        foreach(BasicPolygon* poly, tmpPolyLst)
+        {
+            tempPoly.removeOne( poly );
+            polyCount++;
+        }
+
+
+    }
+    qDebug() << "Poly count: " << polyCount << polyList.size() << optimizedPoly.size();
+
+
+    /*foreach(BasicPolygon * poly , polyList)
+    {
+        QPolygonF polygon = poly->getPolygon();
         gcode << QString("G1 X%1 Y%2 F1800.000").arg(polygon[0].x(),0, 'f', 3).arg(polygon[0].y(),0, 'f', 3);
         gcode << "G1 Z0.350 F7800.000";
         for(int i=1; i<polygon.size(); i++)
@@ -586,7 +771,26 @@ void MainWindow::generateGCode()
         }
 
         gcode << QString("G1 Z%1 F7800.000 ;lift up %1 mm").arg(elevation,0,'f',3);
+    }*/
+
+    foreach(QList<BasicPolygon*> list, optimizedPoly)
+    {
+        gcode << QString("G1 X%1 Y%2 F1800.000").arg(list.first()->getPolygon().at(0).x(),0, 'f', 3).arg(list.first()->getPolygon().at(0).y(),0, 'f', 3);
+        gcode << "G1 Z0.350 F7800.000";
+        foreach(BasicPolygon * poly , list)
+        {
+            QPolygonF polygon = poly->getPolygon();
+
+            for(int i=1; i<polygon.size(); i++)
+            {
+                gcode << QString("G1 X%1 Y%2 F1800.000").arg(polygon[i].x(),0, 'f', 3).arg(polygon[i].y(),0, 'f', 3);
+            }
+
+        }
+        gcode << QString("G1 Z%1 F7800.000 ;lift up %1 mm").arg(elevation,0,'f',3);
     }
+
+
 
     foreach(Circle * circle , circleList)
     {
@@ -607,6 +811,22 @@ void MainWindow::generateGCode()
     GCodeViewer *gviewer = new GCodeViewer(this);
     gviewer->setGCode( gcode );
     gviewer->show();
+}
+
+QList<BasicPolygon*> MainWindow::searchPolygons(BasicPolygon *previous, QList<BasicPolygon*> fullLst)
+{
+    QList<BasicPolygon*> lst;
+    lst.append(previous);
+    fullLst.removeOne( previous );
+    foreach(BasicPolygon* poly, fullLst)
+    {
+        if(previous->getPolygon().last() == poly->getPolygon().first())
+        {
+            lst.append( searchPolygons(poly, fullLst) );
+            break;
+        }
+    }
+    return lst;
 }
 
 void MainWindow::updateBoundary(float &w, float &h, float x1, float x2, float y1, float y2)

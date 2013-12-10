@@ -5,14 +5,15 @@
 #include <QtMath>
 #include <QDebug>
 
-class QBezier
+#include "basicpolygon.h"
+
+class QBezier : public BasicPolygon
 {    
 public:
     explicit QBezier(QVector<QPointF> points, int steps);
-    QPolygonF getPolygon() { return myPolygon; }
+
 
 private:
-    QPolygonF myPolygon;
 
     int binomialCoefficient(int n, int i);
     int factorial(int n);

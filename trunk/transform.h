@@ -5,40 +5,28 @@
 #include <QDebug>
 #include <QPointF>
 #include <QStringList>
+#include "abstracttransform.h"
 
-struct rotationTransform
-{
-    double angle;
-    QPointF center;
-};
 
-struct matrix3x3_struct
-{
-    double m11;
-    double m12;
-    double m13;
-    double m21;
-    double m22;
-    double m23;
-    bool isSet;
-};
 
 
 class Transform
 {
 public:
     Transform();
-    Transform(QString transform);
 
-    QPointF getTranslate() { return translate; }
+    QList<AbstractTransform*> getTransforms(QString transform);
+
+    /*QPointF getTranslate() { return translate; }
     rotationTransform getRotate() {return rotation; }
-    matrix3x3_struct getMatrix() { return matrix; }
+    matrix3x3_struct getMatrix() { return matrix; }*/
 
 
 private:
-    QPointF translate;
+    /*QPointF translate;
     rotationTransform rotation;
-    matrix3x3_struct matrix;
+    matrix3x3_struct matrix;*/
+    QList<AbstractTransform*> trList;
 
 };
 

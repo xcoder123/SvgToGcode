@@ -22,7 +22,8 @@ SOURCES += main.cpp\
     polygon.cpp \
     transform.cpp \
     arc.cpp \
-    basicpolygon.cpp
+    basicpolygon.cpp \
+    abstracttransform.cpp
 
 HEADERS  += mainwindow.h \
     svgitem.h \
@@ -33,7 +34,8 @@ HEADERS  += mainwindow.h \
     polygon.h \
     transform.h \
     arc.h \
-    basicpolygon.h
+    basicpolygon.h \
+    abstracttransform.h
 
 FORMS    += mainwindow.ui \
     gcodeviewer.ui

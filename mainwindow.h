@@ -41,8 +41,8 @@ private slots:
     void updateBoundary(float &w, float&h, float x1, float x2, float y1, float y2);
     void generateGCode();
     QVector<double> parseSVGNumbers(QString cmd);
-    Transform getTransforms(QXmlStreamAttributes &attrib);
     QList<BasicPolygon*> searchPolygons(BasicPolygon *previous, QList<BasicPolygon*> fullLst);
+    void fitToView();
 
 private:
     Ui::MainWindow *ui;
@@ -55,6 +55,7 @@ private:
     QList<BasicPolygon*> polyList;
     QList<Arc*> arcList;
     double elevation;
+    QGraphicsRectItem *bedBoundary;
 };
 
 

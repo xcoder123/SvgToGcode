@@ -31,6 +31,7 @@
    <attribute name="toolBarBreak">
     <bool>false</bool>
    </attribute>
+   <addaction name="actionFit_To_View"/>
   </widget>
   <widget class="QMenuBar" name="menuBar">
    <property name="geometry">
@@ -54,7 +55,14 @@
     <addaction name="actionGenerate_GCode"/>
     <addaction name="actionSimulate_GCode"/>
    </widget>
+   <widget class="QMenu" name="menuView">
+    <property name="title">
+     <string>View</string>
+    </property>
+    <addaction name="actionFit_To_View"/>
+   </widget>
    <addaction name="menuFile"/>
+   <addaction name="menuView"/>
    <addaction name="menuTools"/>
   </widget>
   <action name="actionOpen_SVG">
@@ -70,6 +78,15 @@
   <action name="actionSimulate_GCode">
    <property name="text">
     <string>Simulate GCode</string>
+   </property>
+  </action>
+  <action name="actionFit_To_View">
+   <property name="icon">
+    <iconset resource="res.qrc">
+     <normaloff>:/images/zoom-fit-best.png</normaloff>:/images/zoom-fit-best.png</iconset>
+   </property>
+   <property name="text">
+    <string>Fit To View</string>
    </property>
   </action>
  </widget>

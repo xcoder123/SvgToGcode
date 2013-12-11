@@ -11,6 +11,7 @@ MainWindow::MainWindow(QWidget *parent) :
 
     connect(ui->actionOpen_SVG, SIGNAL(triggered()), this, SLOT(openSvg()));
     connect(ui->actionGenerate_GCode, SIGNAL(triggered()), this, SLOT(generateGCode()));
+    connect(ui->actionFit_To_View, SIGNAL(triggered()), this, SLOT(fitToView()));
 
     QDoubleSpinBox *penWidth = new QDoubleSpinBox(this);
     penWidth->setMinimum(0.1);
@@ -21,20 +22,23 @@ MainWindow::MainWindow(QWidget *parent) :
 
     ui->mainToolBar->addWidget( penWidth );
 
-    ui->graphicsView->setViewportUpdateMode( QGraphicsView::FullViewportUpdate );
-    scene = new QGraphicsScene(0, 0, 1200,1200, this);
+    //ui->graphicsView->setViewportUpdateMode( QGraphicsView::FullViewportUpdate );
+    scene = new QGraphicsScene(-400, -400, 1200,1200, this);
     ui->graphicsView->setScene( scene );
+
+    bedBoundary = new QGraphicsRectItem( 0,0,200,200 );
+    bedBoundary->setPen( QPen(Qt::black, 1, Qt::SolidLine, Qt::RoundCap, Qt::RoundJoin) );
+    scene->addItem(bedBoundary);
 
     svgItem = new SvgItem();
     svgItem->setRect(0,0,200,200);
     scene->addItem( svgItem );
 
 
+
+
     elevation = 2.2;
-    qDebug() << tr("Application locked and loaded...");   
-
-
-
+    qDebug() << tr("Application locked and loaded...") << QString("-5e-5").toDouble()+1;
 
 }
 
@@ -45,7 +49,7 @@ void MainWindow::openSvg()
     qBezierList.append( new QBezier(points , 32 ) );
     svgItem->setQBezierList( qBezierList );*/
 
-    QPointF cp = QPointF(20,20);
+    /*QPointF cp = QPointF(20,20);
     Circle * c = new Circle(cp, 48, 20.0, 20.0);
     circleList.append(c);
     svgItem->setCircleList(circleList);
@@ -59,7 +63,7 @@ void MainWindow::openSvg()
     //svgItem->setRect(0,0,80, 90);
     qDebug() << "HW " << svgItem->rect();
 
-    ui->graphicsView->fitInView(svgItem, Qt::KeepAspectRatio);
+    ui->graphicsView->fitInView(svgItem, Qt::KeepAspectRatio);*/
 
     QString fileName = QFileDialog::getOpenFileName(this,
         tr("Open SVG"), "", tr("SVG File (*.svg)"));
@@ -114,13 +118,14 @@ void MainWindow::readSVG()
 
     QPointF offset = QPointF(0,0);
 
+    QList< QList<AbstractTransform*> > groupTransformList;
+
     while (!xml.atEnd() && !xml.hasError())
     {
 
+        QString name = xml.name().toString();
         if (xml.isStartElement())
-        {
-            QString name = xml.name().toString();
-
+        {            
             qDebug() << "Cname " << name;
             if (name == "line")
             {
@@ -130,21 +135,50 @@ void MainWindow::readSVG()
 
                 double lineWidth = style.mid( style.indexOf("stroke-width:")+13, style.indexOf(";")-13  ).toDouble();
 
-                Line *line = new Line(qAbs(attrib.value("x1").toDouble()), qAbs(attrib.value("y1").toDouble()),
+                /*Line *line = new Line(qAbs(attrib.value("x1").toDouble()), qAbs(attrib.value("y1").toDouble()),
                                       qAbs(attrib.value("x2").toDouble()),qAbs(attrib.value("y2").toDouble()),
-                                      lineWidth);
+                                      lineWidth);*/
+
+                QVector<QPointF> points;
+
+                points << QPointF( attrib.value("x1").toDouble(), attrib.value("y1").toDouble()  );
+                points << QPointF( attrib.value("x2").toDouble(), attrib.value("y2").toDouble() );
+
+                Polygon * poly = new Polygon(points,false);
 
 
 
-                qDebug() << "line: " << line->p1() << line->p2();
-                lineList.push_back(line);
+                //qDebug() << "line: " << line->p1() << line->p2();
+                //lineList.push_back(line);
+
+                QList<AbstractTransform*> elementTransformList;
+                Transform trans;
+                if(attrib.hasAttribute("transform"))
+                {
+                    elementTransformList = trans.getTransforms( attrib.value("transform").toString() );
+                }
+                QList< QList< AbstractTransform * > > tempTransformList;
+                tempTransformList.append( groupTransformList );
+                tempTransformList.push_back( elementTransformList );
+                poly->applyTransformations( tempTransformList );
+
+                polyList.push_back( poly );
 
 
-                updateBoundary( width, height,
-                                (float)attrib.value("x1").toFloat(),
-                                (float)attrib.value("x2").toFloat(),
-                                (float)attrib.value("y1").toFloat(),
-                                (float)attrib.value("y2").toFloat());
+
+            }
+            else if(name == "g")
+            {
+                qDebug() << "God dammit, a group";
+                QXmlStreamAttributes attrib = xml.attributes();
+                QList<AbstractTransform*> elementTransformList;
+                Transform trans;
+                if(attrib.hasAttribute("transform"))
+                {
+                    elementTransformList = trans.getTransforms( attrib.value("transform").toString() );
+                }
+
+                groupTransformList.push_back( elementTransformList );
 
             }
             else if(name == "polygon")
@@ -155,12 +189,11 @@ void MainWindow::readSVG()
                 QVector<double> pointLst = parseSVGNumbers( pointsStr );
                 if(pointLst.size() % 2 == 0) //Is the number of cooridnates even?
                 {
+                    QList<AbstractTransform*> elementTransformList;
                     Transform trans;
-                    QPointF translate(0,0);
                     if(attrib.hasAttribute("transform"))
                     {
-                        trans = Transform(attrib.value("transform").toString());
-                        translate = trans.getTranslate();
+                        elementTransformList = trans.getTransforms( attrib.value("transform").toString() );
                     }
 
                     QVector<QPointF> points;
@@ -170,13 +203,10 @@ void MainWindow::readSVG()
                     }
 
                     Polygon* poly = new Polygon(points);
-                    poly->setTranslate( translate );                    
-                    if(trans.getMatrix().isSet == true)
-                        poly->setMatrix( trans.getMatrix() );
-                    if(trans.getRotate().angle != 0)
-                    {
-                        poly->setRotation( trans.getRotate() );
-                    }
+                    QList< QList< AbstractTransform * > > tempTransformList;
+                    tempTransformList.append( groupTransformList );
+                    tempTransformList.push_back( elementTransformList );
+                    poly->applyTransformations( tempTransformList );
                     polyList.push_back( poly );
 
                     qDebug() << "Polygon:" << pointsStr << points;
@@ -194,12 +224,11 @@ void MainWindow::readSVG()
                 QVector<double> pointLst = parseSVGNumbers( pointsStr );
                 if(pointLst.size() % 2 == 0) //Is the number of cooridnates even?
                 {
+                    QList<AbstractTransform*> elementTransformList;
                     Transform trans;
-                    QPointF translate(0,0);
                     if(attrib.hasAttribute("transform"))
                     {
-                        trans = Transform(attrib.value("transform").toString());
-                        translate = trans.getTranslate();
+                        elementTransformList = trans.getTransforms( attrib.value("transform").toString() );
                     }
 
 
@@ -210,11 +239,10 @@ void MainWindow::readSVG()
                     }
 
                     Polygon* poly = new Polygon(points, false);
-                    poly->setTranslate( translate );
-                    if(trans.getRotate().angle != 0)
-                    {
-                        poly->setRotation( trans.getRotate() );
-                    }
+                    QList< QList< AbstractTransform * > > tempTransformList;
+                    tempTransformList.append( groupTransformList );
+                    tempTransformList.push_back( elementTransformList );
+                    poly->applyTransformations( tempTransformList );
                     polyList.push_back( poly );
 
                     //qDebug() << "Polygon:" << pointsStr << points;
@@ -230,6 +258,14 @@ void MainWindow::readSVG()
                 QXmlStreamAttributes attrib = xml.attributes();
                 float rx = attrib.value("rx").toFloat();
                 float ry = attrib.value("rx").toFloat();
+
+                QList<AbstractTransform*> elementTransformList;
+                Transform trans;
+                if(attrib.hasAttribute("transform"))
+                {
+                    elementTransformList = trans.getTransforms( attrib.value("transform").toString() );
+                }
+
                 /*Circle *circle = new Circle(attrib.value("cx").toFloat()-diameter/2, attrib.value("cy").toFloat()-diameter/2,
                             diameter,diameter);*/
                 Circle *ellipse = new Circle(
@@ -243,7 +279,13 @@ void MainWindow::readSVG()
                                                      rx,ry);
                 //qDebug() << "line: " << line;
                 //qDebug() << offset;
-                circleList.push_back(ellipse);
+
+                QList< QList< AbstractTransform * > > tempTransformList;
+                tempTransformList.append( groupTransformList );
+                tempTransformList.push_back( elementTransformList );
+                ellipse->applyTransformations( tempTransformList );
+
+                polyList.push_back(ellipse);
             }
             else if(name == "path")
             {
@@ -256,7 +298,7 @@ void MainWindow::readSVG()
                 while(i < d.length())
                 {
 
-                    if(d[i] >= QChar('A')) //Captial A in ASCII
+                    if(d[i] >= QChar('A') && d[i] != QChar('e')) //Captial A in ASCII
                     {
                         QString temp;
                         do
@@ -266,7 +308,7 @@ void MainWindow::readSVG()
                             else
                                 temp.push_back( ' ' );
                             i++;
-                        } while(i < d.length() && d[i] < QChar('A'));
+                        } while(i < d.length() && (d[i] < QChar('A') || d[i] == QChar('e')) );
                         i--;
                         cmds << temp;
                     }
@@ -275,7 +317,25 @@ void MainWindow::readSVG()
 
                 qDebug() << "CMDS" << cmds;
 
-                Transform transformations = getTransforms( attrib );
+                qDebug() << "Constructing list of transform";
+                QList<AbstractTransform*> elementTransformList;
+                Transform trans;
+                if(attrib.hasAttribute("transform"))
+                {
+                    elementTransformList = trans.getTransforms( attrib.value("transform").toString() );
+                }
+                QList< QList< AbstractTransform * > > tempTransformList;
+                tempTransformList.append( groupTransformList );
+                tempTransformList.push_back( elementTransformList );
+
+                qDebug() << "TRANSFORMS: " << tempTransformList.size();
+                foreach(QList<AbstractTransform*> at, tempTransformList)
+                {
+                    foreach(AbstractTransform* t, at)
+                        qDebug() << "T: " << t->type();
+                }
+
+                qDebug() << "DONE.";
 
                 QPointF cPos = QPointF(0,0); //CURRENT POSITION
                 QPointF zPos = QPointF(0,0); //Position of CLOSE PATH, used for Z command
@@ -307,7 +367,7 @@ void MainWindow::readSVG()
                                 //Couldn't find that in documentation, though. Strange.
                                 //zPos = cPos;
 
-                                    poly->applyTransformations( transformations );
+                                    poly->applyTransformations( tempTransformList );
 
                                 polyList.push_back( poly );
                             }
@@ -334,7 +394,7 @@ void MainWindow::readSVG()
                                 cPos =  cPos + QPointF(num[i], num[i+1]);
                                 //zPos = cPos;
 
-                                    poly->applyTransformations( transformations );
+                                    poly->applyTransformations( tempTransformList );
                                 polyList.push_back( poly );
                             }
                         }
@@ -350,7 +410,7 @@ void MainWindow::readSVG()
                             Polygon *poly = new Polygon(points, false);
                             cPos =  QPointF(num[i], cPos.y());
 
-                                poly->applyTransformations( transformations );
+                                poly->applyTransformations( tempTransformList );
                             polyList.push_back( poly );
                         }
                     }
@@ -365,7 +425,7 @@ void MainWindow::readSVG()
                             Polygon *poly = new Polygon(points, false);
                             cPos =  cPos + QPointF(num[i], 0);
 
-                                poly->applyTransformations( transformations );
+                                poly->applyTransformations( tempTransformList );
                             polyList.push_back( poly );
                         }
                     }
@@ -380,7 +440,7 @@ void MainWindow::readSVG()
                             Polygon *poly = new Polygon(points, false);
                             cPos =  QPointF(cPos.x() , num[i]);
 
-                                poly->applyTransformations( transformations );
+                                poly->applyTransformations( tempTransformList );
                             polyList.push_back( poly );
                         }
                     }
@@ -395,7 +455,7 @@ void MainWindow::readSVG()
                             Polygon *poly = new Polygon(points, false);
                             cPos =  cPos + QPointF(0, num[i]);
 
-                                poly->applyTransformations( transformations );
+                                poly->applyTransformations( tempTransformList );
                             polyList.push_back( poly );
                         }
                     }
@@ -410,7 +470,7 @@ void MainWindow::readSVG()
                             cPos =  QPointF(num[i+5], num[i+6]);
 
 
-                                arc->applyTransformations( transformations );
+                                arc->applyTransformations( tempTransformList );
 
                             //arcList.push_back( arc );
                                 polyList.push_back( arc );
@@ -427,7 +487,7 @@ void MainWindow::readSVG()
                             cPos =  cPos + QPointF(num[i+5], num[i+6]);
 
 
-                                arc->applyTransformations( transformations );
+                                arc->applyTransformations( tempTransformList );
 
                             //arcList.push_back( arc );
                                 polyList.push_back( arc );
@@ -445,7 +505,7 @@ void MainWindow::readSVG()
                             cPos =  QPointF(num[i], num[i+1]);
 
 
-                                poly->applyTransformations( transformations );
+                                poly->applyTransformations( tempTransformList );
 
                             polyList.push_back( poly );
                         }
@@ -462,7 +522,7 @@ void MainWindow::readSVG()
                             cPos =  cPos + QPointF(num[i], num[i+1]);
 
 
-                                poly->applyTransformations( transformations );
+                                poly->applyTransformations( tempTransformList );
 
                             polyList.push_back( poly );
                         }
@@ -483,7 +543,7 @@ void MainWindow::readSVG()
                             sPos = QPointF( num[i+2], num[i+3] );
 
 
-                                bezier->applyTransformations( transformations );
+                                bezier->applyTransformations( tempTransformList );
 
                             //qBezierList.push_back( bezier );
                                 polyList.push_back( bezier );
@@ -510,7 +570,7 @@ void MainWindow::readSVG()
                             QBezier *bezier = new QBezier(points, 32);
 
 
-                                bezier->applyTransformations( transformations );
+                                bezier->applyTransformations( tempTransformList );
 
                             //qBezierList.push_back( bezier );
                             polyList.push_back( bezier );
@@ -540,7 +600,7 @@ void MainWindow::readSVG()
 
 
 
-                                bezier->applyTransformations( transformations );
+                                bezier->applyTransformations( tempTransformList );
 
                             //qBezierList.push_back( bezier );
                                 polyList.push_back( bezier );
@@ -569,7 +629,7 @@ void MainWindow::readSVG()
                             QBezier *bezier = new QBezier(points, 32);
 
 
-                                bezier->applyTransformations( transformations );
+                                bezier->applyTransformations( tempTransformList );
 
                             //qBezierList.push_back( bezier );
                                 polyList.push_back( bezier );
@@ -590,7 +650,7 @@ void MainWindow::readSVG()
                         cPos = zPos;
 
 
-                            poly->applyTransformations( transformations );
+                            poly->applyTransformations( tempTransformList );
 
                         polyList.push_back( poly );
                         //this->lineList.push_back( line );
@@ -617,17 +677,33 @@ void MainWindow::readSVG()
                 //qDebug() << "line: " << line;
                 //qDebug() << offset;
                 //circleList.push_back(circle);
+
+                QList<AbstractTransform*> elementTransformList;
+                Transform trans;
+                if(attrib.hasAttribute("transform"))
+                {
+                    elementTransformList = trans.getTransforms( attrib.value("transform").toString() );
+                }
+
+                QList< QList< AbstractTransform * > > tempTransformList;
+                tempTransformList.append( groupTransformList );
+                tempTransformList.push_back( elementTransformList );
+                circle->applyTransformations( tempTransformList );
+
                 polyList.push_back( circle );
 
-                updateBoundary( width, height,
-                                cRect->x(),
-                                cRect->x()+cRect->width(),
-                                cRect->y(),
-                                cRect->y()+cRect->height()
-                            );
+            }
+        }
+        else if( xml.isEndElement() )
+        {
+            if(name == "g")
+            {
+                qDebug() << "God dammit, an END of group - ";
+                groupTransformList.removeLast();
             }
         }
 
+        //qDebug() << "ACTUAL XML ELEMENT: " << xml.name();
         xml.readNext();
     }
 
@@ -661,18 +737,58 @@ void MainWindow::readSVG()
         svgItem->setPolygonList( polyList );
         svgItem->setArcList( arcList );
         //svgItem->setRect(0,0,width, height);
-        qDebug() << "HW " << width << height << svgItem->rect();
+
+        QPointF min = QPointF(999999 ,999999 );
+        QPointF max = QPointF( 0,0 );
+        foreach(BasicPolygon* poly, polyList)
+        {
+            foreach(QPointF pts, poly->getPolygon())
+            {
+                if(pts.x() < min.x())
+                    min.setX(pts.x());
+                if(pts.y() < min.y())
+                    min.setY( pts.y() );
+
+                if(pts.x() > max.x())
+                    max.setX(pts.x());
+                if(pts.y() > max.y())
+                    max.setY(pts.y());
+            }
+        }
+
+        QRectF imageBoundary(min, max);
+
+        svgItem->setRect( imageBoundary );
+
+
+        qDebug() << "Min: " << min << "Max: " << max;
+        //qDebug() << "HW " << width << height << svgItem->rect();
 
         qDebug() << "commands used: " << commandsUSED.toSet();
-        ui->graphicsView->fitInView(svgItem, Qt::KeepAspectRatio);
+
+        fitToView();
         //ui->graphicsView->fitInView(QRectF(0,0,1200.0,1200.0), Qt::KeepAspectRatio);
+    }
+}
+
+void MainWindow::fitToView()
+{
+    if(svgItem->rect().x()+svgItem->rect().width() < 200 && svgItem->rect().y()+svgItem->rect().height() < 200)
+    {
+        ui->graphicsView->fitInView(-25,-25, 250,250, Qt::KeepAspectRatio);
+        //ui->graphicsView->centerOn( bedBoundary );
+    }
+    else
+    {
+        ui->graphicsView->fitInView(-25,-25, svgItem->rect().width() +50 ,svgItem->rect().height() +50, Qt::KeepAspectRatio);
     }
 }
 
 QVector<double> MainWindow::parseSVGNumbers(QString cmd)
 {
-    cmd.replace(QRegExp("[a-zA-Z]"), "");
+    cmd.replace(QRegExp("[a-df-zA-DF-Z]"), "");
     cmd.replace("-", " -");
+    cmd.replace( "e -", "e-" );
     //qDebug( ) << "COMMAND " << cmd;
     cmd = cmd.trimmed();
     cmd = cmd.simplified();
@@ -680,22 +796,14 @@ QVector<double> MainWindow::parseSVGNumbers(QString cmd)
     QStringList numStr = cmd.split(" ");
     QVector<double> num;
     foreach(QString str, numStr)
+    {
         //num.push_back( qAbs(str.toDouble()) ); // <-- honestly that was stupido.
-        num.push_back( str.toDouble() );
+            num.push_back( str.toDouble() );
+    }
 
     return num;
 }
 
-Transform MainWindow::getTransforms(QXmlStreamAttributes &attrib)
-{
-    Transform trans;
-    if(attrib.hasAttribute("transform"))
-    {
-        trans = Transform(attrib.value("transform").toString());
-    }
-
-    return trans;
-}
 
 void MainWindow::generateGCode()
 {

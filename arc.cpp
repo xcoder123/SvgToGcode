@@ -102,9 +102,7 @@ Arc::Arc(QPointF radii, double rotation, int largeArcFlag, int sweepFlag, QPoint
     constructPolygon( cp , radii , qDegreesToRadians(-theta), qDegreesToRadians(-deltaTheta) );
 
     //Finally rotate:
-    rotationTransform rot;
-    rot.angle = rotation;
-    rot.center = cp;
+    RotationTransform* rot = new RotationTransform(rotation, cp);
     setRotation( rot );
 
 }

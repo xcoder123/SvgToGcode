@@ -17,13 +17,13 @@ As of now the application has the following features:
 
 There are still many features I would like to implement and I belive are quite mandatory for succesful project:
 
--Filling
--Support line width, could be viewed as filling algorithm
--Automatic line invisibility test (detect where lines shouldn't be visible
--Scaling of the image
--Improved longest path algorithm, for example use djekstra algorithm to find the longest path
--Construct a new algorithm to detect the shortest path between multiple elements
--Support of multiple pictures in one workspace
+- Filling
+- Support line width, could be viewed as filling algorithm
+- Automatic line invisibility test (detect where lines shouldn't be visible
+- Scaling of the image
+- Improved longest path algorithm, for example use djekstra algorithm to find the longest path
+- Construct a new algorithm to detect the shortest path between multiple elements
+- Support of multiple pictures in one workspace
 
 
 Maybe the code for svg parsing will be useful for someone.
